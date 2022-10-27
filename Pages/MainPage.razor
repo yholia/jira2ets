@@ -38,7 +38,7 @@
             @if (ProjectDictionary.Any())
             {
                 <p>
-                    <MatSelectItem ValueChanged="@(async (string s) => await SetDefaultTaskProject(s))"
+                    <MatSelectItem ValueChanged="@(async (string? s) => await SetDefaultTaskProject(s))"
                                    Value="DefaultProjectTitle"
                                    Items="@ProjectDictionary.Keys.ToList().Select(s => s.title).ToList()"
                                    Disabled="@(!ProjectDictionary.Any())"
@@ -46,7 +46,7 @@
                                    Label="Default Project"/>
                 </p>
                 <p>
-                    <MatSelectItem ValueChanged="@(async (string s) => await SetDefaultTaskType(s))"
+                    <MatSelectItem ValueChanged="@(async (string? s) => await SetDefaultTaskType(s))"
                                    Value="DefaultTaskTypeTitle"
                                    Items="@GetTaskTypes(DefaultProjectTitle)"
                                    Disabled="@(DefaultProjectTitle == null)"
@@ -105,8 +105,8 @@
     private DateTime? From { get; set; } = DayOfWeek(System.DayOfWeek.Monday);
     private DateTime? To { get; set; } = DayOfWeek(System.DayOfWeek.Friday);
     private List<EtsItem> EtsItems { get; } = new();
-    private string DefaultTaskTypeTitle { get; set; }
-    private string DefaultProjectTitle { get; set; }
+    private string? DefaultTaskTypeTitle { get; set; }
+    private string? DefaultProjectTitle { get; set; }
     private Dictionary<Project, List<Project>> ProjectDictionary { get; } = new();
 
     protected override async Task OnInitializedAsync()
@@ -119,7 +119,7 @@
         {
             ProjectDictionary.Clear();
 
-            var projects = await EtsService.GetProjects();
+            var projects = await EtsService.GetActiveProjects();
             var taskTypes = await EtsService.GetTaskTypes(projects);
 
             projects.ForEach(project => { ProjectDictionary.Add(project, taskTypes.Find(s => s.project_id == project.id)?.task_types); });
@@ -132,7 +132,6 @@
         {
             DefaultProjectTitle = (await ProtectedLocalStore.GetAsync<string>("DefaultProject")).Value;
             DefaultTaskTypeTitle = (await ProtectedLocalStore.GetAsync<string>("DefaultTaskType")).Value;
-            StateHasChanged();
         }
     }
 
@@ -154,10 +153,6 @@
                     {
                         s.IsReportFailed = true;
                         throw;
-                    }
-                    finally
-                    {
-                        StateHasChanged();
                     }
                 });
         }
@@ -270,19 +265,19 @@
         eItem.TimeUnit.task_type_title = taskType?.title;
     }
 
-    private async Task SetDefaultTaskProject(string title)
+    private async Task SetDefaultTaskProject(string? title)
     {
         DefaultProjectTitle = title;
         await ProtectedLocalStore.SetAsync("DefaultProject", DefaultProjectTitle);
     }
 
-    private async Task SetDefaultTaskType(string title)
+    private async Task SetDefaultTaskType(string? title)
     {
         DefaultTaskTypeTitle = title;
         await ProtectedLocalStore.SetAsync("DefaultTaskType", DefaultTaskTypeTitle);
     }
 
-    private List<string> GetTaskTypes(string projectTitle)
+    private List<string> GetTaskTypes(string? projectTitle)
     {
         if (projectTitle == null)
         {
