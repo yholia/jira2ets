@@ -9,11 +9,21 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="ElectronNET.API" Version="13.5.1" />
+    <PackageReference Include="MatBlazor" Version="2.8.0" />
+    <PackageReference Include="Microsoft.AspNetCore.ProtectedBrowserStorage" Version="0.1.0-alpha.19521.1" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.17.0" />
   </ItemGroup>
   <ItemGroup>
     <Content Update="electron.manifest.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <_ContentIncludedByDefault Remove="Shared\MainLayout.razor" />
+    <_ContentIncludedByDefault Remove="Shared\NavMenu.razor" />
+    <_ContentIncludedByDefault Remove="Shared\SurveyPrompt.razor" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Models" />
   </ItemGroup>
 </Project>

@@ -1,7 +1,6 @@
 using ElectronNET.API;
-using jira2ets.Data;
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
+using jira2ets.Services;
+using MatBlazor;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,7 +10,13 @@ builder.WebHost.UseElectron(args);
 builder.Services.AddRazorPages();
 builder.Services.AddElectron();
 builder.Services.AddServerSideBlazor();
-builder.Services.AddSingleton<WeatherForecastService>();
+builder.Services.AddHttpClient();
+builder.Services.AddMatBlazor();
+builder.Services.AddProtectedBrowserStorage();
+builder.Services.AddSingleton<State>();
+builder.Services.AddSingleton<EtsService>();
+builder.Services.AddSingleton<JiraService>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

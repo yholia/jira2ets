@@ -1,0 +1,298 @@
+﻿@page "/main"
+@using jira2ets.Services
+@using jira2ets.Models.Ets
+
+@inject ProtectedLocalStorage ProtectedLocalStore
+@inject HttpClient HttpClient
+@inject EtsService EtsService
+@inject JiraService JiraService
+@inject NavigationManager NavigationManager
+@inject State State
+
+<div class="mat-layout-grid mat-layout-grid-align-middle">
+    <div class="mat-layout-grid-inner">
+        <div class="mat-layout-grid-cell mat-layout-grid-cell-span-2">
+            <p>
+                <MatDatePicker Label="From" @bind-Value="From" Format="dd-MM-yy" Outlined="true"/>
+            </p>
+            <p>
+                <MatButton Style="width:100%"
+                           Raised="true"
+                           Label="Get worklog"
+                           OnClick="@(async () => await GetWorkLogAsync())"/>
+            </p>
+        </div>
+        <div class="mat-layout-grid-cell mat-layout-grid-cell-span-2">
+            <p>
+                <MatDatePicker Label="To" @bind-Value="To" Format="dd-MM-yy" Outlined="true"/>
+            </p>
+            <p>
+                <MatButton Style="width:100%"
+                           Raised="true"
+                           Label="Fill ets"
+                           Disabled="@(!EtsItems.Any())"
+                           OnClick="@(async () => await PopulateEtsAsync())"/>
+            </p>
+        </div>
+        <div class="mat-layout-grid-cell mat-layout-grid-cell-span-2">
+            @if (ProjectDictionary.Any())
+            {
+                <p>
+                    <MatSelectItem ValueChanged="@(async (string s) => await SetDefaultTaskProject(s))"
+                                   Value="DefaultProjectTitle"
+                                   Items="@ProjectDictionary.Keys.ToList().Select(s => s.title).ToList()"
+                                   Disabled="@(!ProjectDictionary.Any())"
+                                   Outlined="true"
+                                   Label="Default Project"/>
+                </p>
+                <p>
+                    <MatSelectItem ValueChanged="@(async (string s) => await SetDefaultTaskType(s))"
+                                   Value="DefaultTaskTypeTitle"
+                                   Items="@GetTaskTypes(DefaultProjectTitle)"
+                                   Disabled="@(DefaultProjectTitle == null)"
+                                   Outlined="true"
+                                   Label="Default Task"/>
+                </p>
+            }
+        </div>
+    </div>
+    <MatDivider/>
+    <div>
+        <table class="table">
+            <thead>
+            <tr>
+                <th scope="col">#</th>
+                <th scope="col">Project</th>
+                <th scope="col">Task</th>
+                <th scope="col">Date</th>
+                <th scope="col">Description</th>
+                <th scope="col">Time spent: @(EtsItems.Sum(s => s.TimeUnit.minutes) / 60)</th>
+            </tr>
+            </thead>
+            <tbody>
+            @foreach (var eItem in EtsItems)
+            {
+                <tr class="@GetTimeUnitColor(eItem)">
+                    <td>
+                        <MatCheckbox @bind-Value="@eItem.ShouldBeReported"/>
+                    </td>
+                    <td>
+                        <MatSelectItem ValueChanged="@((string s) => SetTaskProject(eItem, s))"
+                                       Value="@eItem.TimeUnit.project_title"
+                                       Items="@ProjectDictionary.Keys.ToList().Select(s => s.title).ToList()"
+                                       Disabled="@(!eItem.ShouldBeReported)"
+                                       Outlined="true"/>
+                    </td>
+                    <td>
+                        <MatSelectItem ValueChanged="@((string s) => SetTaskType(eItem, s))"
+                                       Value="@eItem.TimeUnit.task_type_title"
+                                       Items="@GetTaskTypes(eItem.TimeUnit.project_title)"
+                                       Disabled="@(!eItem.ShouldBeReported)"
+                                       Outlined="true"/>
+                    </td>
+                    <td>@eItem.TimeUnit.date</td>
+                    <td>@eItem.TimeUnit.description</td>
+                    <td>@eItem.TimeUnit.time</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+
+    private DateTime? From { get; set; } = DayOfWeek(System.DayOfWeek.Monday);
+    private DateTime? To { get; set; } = DayOfWeek(System.DayOfWeek.Friday);
+    private List<EtsItem> EtsItems { get; } = new();
+    private string DefaultTaskTypeTitle { get; set; }
+    private string DefaultProjectTitle { get; set; }
+    private Dictionary<Project, List<Project>> ProjectDictionary { get; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!State.IsAuthorized)
+        {
+            NavigationManager.NavigateTo(string.Empty);
+        }
+        else
+        {
+            ProjectDictionary.Clear();
+
+            var projects = await EtsService.GetProjects();
+            var taskTypes = await EtsService.GetTaskTypes(projects);
+
+            projects.ForEach(project => { ProjectDictionary.Add(project, taskTypes.Find(s => s.project_id == project.id)?.task_types); });
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            DefaultProjectTitle = (await ProtectedLocalStore.GetAsync<string>("DefaultProject")).Value;
+            DefaultTaskTypeTitle = (await ProtectedLocalStore.GetAsync<string>("DefaultTaskType")).Value;
+            StateHasChanged();
+        }
+    }
+
+    private Task PopulateEtsAsync()
+    {
+        State.IsBusy = true;
+        try
+        {
+            EtsItems.Where(s => s.ShouldBeReported).ToList()
+                .ForEach(async s =>
+                {
+                    try
+                    {
+                        await EtsService.CreateTimeUnit(s.TimeUnit);
+
+                        s.IsReported = true;
+                    }
+                    catch (Exception e)
+                    {
+                        s.IsReportFailed = true;
+                        throw;
+                    }
+                    finally
+                    {
+                        StateHasChanged();
+                    }
+                });
+        }
+        catch (Exception e)
+        {
+            State.DialogText = e.Message;
+            State.IsDialogOpened = true;
+        }
+        finally
+        {
+            State.IsBusy = false;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private async Task GetWorkLogAsync()
+    {
+        State.IsBusy = true;
+        try
+        {
+            EtsItems.Clear();
+
+            var jiraItems = await JiraService.GetWorklogs(From, To);
+            var parentIssues = await JiraService.GetIssuesAsync(jiraItems.Select(s => s.Issue.ParentKey).Distinct());
+            var defProject = ProjectDictionary.Keys.FirstOrDefault(p => p.title == DefaultProjectTitle);
+            var defTaskType = defProject == null
+                ? null
+                : ProjectDictionary[defProject].FirstOrDefault(r => r.title == DefaultTaskTypeTitle);
+
+            EtsItems.AddRange(jiraItems.Select(s =>
+            {
+                var parentIssue = parentIssues[s.Issue.ParentKey];
+                var specialComment = s.Comment == $"Working on issue {s.Issue.Key}" ? string.Empty : s.Comment;
+                var timeUnit = new TimeUnit
+                {
+                    project_id = defProject?.id,
+                    task_type_id = defTaskType?.id,
+                    project_title = defProject?.title,
+                    task_type_title = defTaskType?.title,
+                    minutes = s.TimeSpentSeconds / 60,
+                    overtime = false,
+                    description = $"{s.Issue.ParentKey} {parentIssue.fields.summary}\n{s.Issue.Key} {s.Issue.Summary} {specialComment}",
+                    date = s.Started,
+                    status = "Draft",
+                    isEven = true,
+                    is_billable = false,
+                    is_overtime_payable = false,
+                    overtime_multiplier = 0,
+                    time = s.TimeSpent,
+                    employee_id = EtsService.EmployeeDetails.id,
+                    next_time_unit_id = null
+                };
+
+                return new EtsItem
+                {
+                    ShouldBeReported = true,
+                    TimeUnit = timeUnit
+                };
+            }));
+        }
+        catch (Exception e)
+        {
+            State.DialogText = e.Message;
+            State.IsDialogOpened = true;
+        }
+        finally
+        {
+            State.IsBusy = false;
+        }
+    }
+
+    private static DateTime DayOfWeek(DayOfWeek dayOfWeek)
+    {
+        var dateTime = DateTime.Now;
+        var diff = dateTime.DayOfWeek - dayOfWeek;
+        return dateTime.AddDays(-1 * diff).Date;
+    }
+
+    private static string GetTimeUnitColor(EtsItem item)
+    {
+        if (item.ShouldBeReported && item.IsReportFailed)
+        {
+            return "table-danger";
+        }
+
+        if (item.ShouldBeReported && item.IsReported)
+        {
+            return "table-success";
+        }
+
+        return !item.ShouldBeReported ? "table-secondary" : "table";
+    }
+
+    private void SetTaskProject(EtsItem eItem, string title)
+    {
+        var project = ProjectDictionary.Keys.First(r => r.title == title);
+        var taskType = ProjectDictionary[project].First();
+        eItem.TimeUnit.project_id = project.id;
+        eItem.TimeUnit.project_title = project.title;
+        eItem.TimeUnit.task_type_id = taskType?.id;
+        eItem.TimeUnit.task_type_title = taskType?.title;
+    }
+
+    private void SetTaskType(EtsItem eItem, string title)
+    {
+        var project = ProjectDictionary.Keys.First(s => s.title == eItem.TimeUnit.project_title);
+        var taskType = ProjectDictionary[project].FirstOrDefault(s => s.title == title);
+        eItem.TimeUnit.task_type_id = taskType?.id;
+        eItem.TimeUnit.task_type_title = taskType?.title;
+    }
+
+    private async Task SetDefaultTaskProject(string title)
+    {
+        DefaultProjectTitle = title;
+        await ProtectedLocalStore.SetAsync("DefaultProject", DefaultProjectTitle);
+    }
+
+    private async Task SetDefaultTaskType(string title)
+    {
+        DefaultTaskTypeTitle = title;
+        await ProtectedLocalStore.SetAsync("DefaultTaskType", DefaultTaskTypeTitle);
+    }
+
+    private List<string> GetTaskTypes(string projectTitle)
+    {
+        if (projectTitle == null)
+        {
+            return new List<string>();
+        }
+
+        var project = ProjectDictionary.Keys.FirstOrDefault(s => s.title == projectTitle);
+
+        return project != null 
+            ? ProjectDictionary[project].Select(s => s.title).ToList() 
+            : new List<string>();
+    }
+}

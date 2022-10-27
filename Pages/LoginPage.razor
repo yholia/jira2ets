@@ -1,0 +1,119 @@
+@page "/"
+@using jira2ets.Services
+
+@inject ProtectedLocalStorage ProtectedLocalStore
+
+@inject HttpClient HttpClient
+@inject EtsService EtsService
+@inject JiraService JiraService
+@inject NavigationManager NavigationManager
+@inject State State
+
+
+<div style="margin-top: 30px; align-self: center;">
+    <div class="row">
+        <div class="col">
+            <MatTextField @bind-Value="JiraUserName" Label="jira user name" Outlined="true"/>
+        </div>
+        <div class="col">
+            <MatTextField @bind-Value="EtsUserName" Label="ets user name" Outlined="true"/>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col">
+            <MatTextField @bind-Value="JiraPassword" Label="jira password" Type="password" Outlined="true" IconTrailing="true"/>
+        </div>
+        <div class="col">
+            <MatTextField @bind-Value="EtsPassword" Label="ets password" Type="password" Outlined="true" IconTrailing="true"/>
+        </div>
+    </div>
+    <div class="row" style="margin-top: 10%">
+        <div class="col">
+            <MatButton Style="width: 100%" Raised="true" Label="Login" OnClick="@Login"/>
+        </div>
+        <div class="col">
+            <MatSlideToggle Label="Remember me" @bind-Value="RememberMe" Outlined="true"/>
+        </div>
+    </div>
+</div>
+
+@code
+{
+    private bool _rememberMe;
+
+    private string EtsUserName { get; set; }
+    private string EtsPassword { get; set; }
+    private string JiraUserName { get; set; }
+    private string JiraPassword { get; set; }
+
+    private bool RememberMe
+    {
+        get => _rememberMe;
+        set
+        {
+            _rememberMe = value;
+
+            ProtectedLocalStore.SetAsync("RememberMe", value);
+
+            if (value) return;
+
+            ProtectedLocalStore.DeleteAsync("JiraPassword");
+            ProtectedLocalStore.DeleteAsync("EtsPassword");
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+
+        if (firstRender)
+        {
+            EtsUserName = (await ProtectedLocalStore.GetAsync<string>("EtsUserName")).Value;
+            EtsPassword = (await ProtectedLocalStore.GetAsync<string>("EtsPassword")).Value;
+            JiraUserName = (await ProtectedLocalStore.GetAsync<string>("JiraUserName")).Value;
+            JiraPassword = (await ProtectedLocalStore.GetAsync<string>("JiraPassword")).Value;
+            RememberMe = (await ProtectedLocalStore.GetAsync<bool>("RememberMe")).Value;
+
+            StateHasChanged();
+
+            if (EtsUserName != null && EtsPassword != null && JiraUserName != null && JiraPassword != null)
+            {
+                await Login();
+            }
+        }
+    }
+
+    private async Task Login()
+    {
+        try
+        {
+            State.IsBusy = true;
+
+            await JiraService.SignIn(JiraUserName, JiraPassword);
+            await EtsService.SignIn(EtsUserName, EtsPassword);
+
+            await ProtectedLocalStore.SetAsync("EtsUserName", EtsUserName);
+            await ProtectedLocalStore.SetAsync("JiraUserName", JiraUserName);
+
+            if (RememberMe)
+            {
+                await ProtectedLocalStore.SetAsync("EtsPassword", EtsPassword);
+                await ProtectedLocalStore.SetAsync("JiraPassword", JiraPassword);
+            }
+
+            State.IsAuthorized = true;
+            NavigationManager.NavigateTo("main");
+        }
+        catch (Exception e)
+        {
+            State.DialogTitle = "Error";
+            State.DialogText = e.Message;
+            State.IsDialogOpened = true;
+            State.IsAuthorized = false;
+        }
+        finally
+        {
+            State.IsBusy = false;
+        }
+    }
+}
