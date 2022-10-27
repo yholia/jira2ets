@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "kPOFCv7JNHVU0wSB/mT2X5LdhfzjJSeWxJODLrylrkvpm2IqIZjCFp5lbxrSK0MvsIufeOqVr8dk91ZFihj6NA==",
+  "success": true,
+  "projectFilePath": "D:\\git\\akvelon\\Jira2Ets\\jira2ets.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\evgeniy.golykhovskiy\\.nuget\\packages\\microsoft.visualstudio.azure.containers.tools.targets\\1.17.0\\microsoft.visualstudio.azure.containers.tools.targets.1.17.0.nupkg.sha512"
+  ],
+  "logs": []
+}
