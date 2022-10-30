@@ -9,31 +9,28 @@
 @inject NavigationManager NavigationManager
 @inject State State
 
-
-<div style="margin-top: 30px; align-self: center;">
-    <div class="row">
-        <div class="col">
-            <MatTextField @bind-Value="JiraUserName" Label="jira user name" Outlined="true"/>
-        </div>
-        <div class="col">
-            <MatTextField @bind-Value="EtsUserName" Label="ets user name" Outlined="true"/>
-        </div>
+<div class="row">
+    <div class="col">
+        <MatTextField @bind-Value="JiraUserName" Label="jira user name" Outlined="true"/>
     </div>
-    <div class="row">
-        <div class="col">
-            <MatTextField @bind-Value="JiraPassword" Label="jira password" Type="password" Outlined="true" IconTrailing="true"/>
-        </div>
-        <div class="col">
-            <MatTextField @bind-Value="EtsPassword" Label="ets password" Type="password" Outlined="true" IconTrailing="true"/>
-        </div>
+    <div class="col">
+        <MatTextField @bind-Value="EtsUserName" Label="ets user name" Outlined="true"/>
     </div>
-    <div class="row" style="margin-top: 10%">
-        <div class="col">
-            <MatButton Style="width: 100%" Raised="true" Label="Login" OnClick="@Login"/>
-        </div>
-        <div class="col">
-            <MatSlideToggle Label="Remember me" @bind-Value="RememberMe" Outlined="true"/>
-        </div>
+</div>
+<div class="row">
+    <div class="col">
+        <MatTextField @bind-Value="JiraPassword" Label="jira password" Type="password" Outlined="true" IconTrailing="true"/>
+    </div>
+    <div class="col">
+        <MatTextField @bind-Value="EtsPassword" Label="ets password" Type="password" Outlined="true" IconTrailing="true"/>
+    </div>
+</div>
+<div class="row" style="margin-top: 10%">
+    <div class="col">
+        <MatButton Style="width: 100%" Raised="true" Label="Login" OnClick="@Login"/>
+    </div>
+    <div class="col">
+        <MatSlideToggle Label="Remember me" @bind-Value="RememberMe" Outlined="true"/>
     </div>
 </div>
 

@@ -1,7 +1,8 @@
-﻿<MatThemeProvider Theme="@_theme">
+﻿@using jira2ets.Pages
+<MatThemeProvider Theme="@_theme">
     <Router AppAssembly="@typeof(App).Assembly">
         <Found Context="routeData">
-            <RouteView RouteData="@routeData"/>
+            <RouteView RouteData="@routeData" DefaultLayout="typeof(Layout)"/>
             <FocusOnNavigate RouteData="@routeData" Selector="h1"/>
         </Found>
         <NotFound>

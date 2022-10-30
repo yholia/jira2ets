@@ -46,12 +46,14 @@
                                    Label="Default Project"/>
                 </p>
                 <p>
-                    <MatSelectItem ValueChanged="@(async (string? s) => await SetDefaultTaskType(s))"
-                                   Value="DefaultTaskTypeTitle"
-                                   Items="@GetTaskTypes(DefaultProjectTitle)"
-                                   Disabled="@(DefaultProjectTitle == null)"
-                                   Outlined="true"
-                                   Label="Default Task"/>
+                    @if(@DefaultProjectTitle != null)
+                    {
+                        <MatSelectItem ValueChanged="@(async (string? s) => await SetDefaultTaskType(s))"
+                                       Value="DefaultTaskTypeTitle"
+                                       Items="@GetTaskTypes(DefaultProjectTitle)"
+                                       Outlined="true"
+                                       Label="Default Task"/>
+                    }
                 </p>
             }
         </div>
@@ -101,7 +103,6 @@
 </div>
 
 @code {
-
     private DateTime? From { get; set; } = DayOfWeek(System.DayOfWeek.Monday);
     private DateTime? To { get; set; } = DayOfWeek(System.DayOfWeek.Friday);
     private List<EtsItem> EtsItems { get; } = new();
@@ -135,26 +136,17 @@
         }
     }
 
-    private Task PopulateEtsAsync()
+    private async Task PopulateEtsAsync()
     {
         State.IsBusy = true;
         try
         {
-            EtsItems.Where(s => s.ShouldBeReported).ToList()
-                .ForEach(async s =>
-                {
-                    try
-                    {
-                        await EtsService.CreateTimeUnit(s.TimeUnit);
-
-                        s.IsReported = true;
-                    }
-                    catch (Exception e)
-                    {
-                        s.IsReportFailed = true;
-                        throw;
-                    }
-                });
+            await Parallel.ForEachAsync( EtsItems.Where(s => s.ShouldBeReported).ToList(), async (s, token)  =>
+            {
+                var result = await EtsService.CreateTimeUnit(s.TimeUnit);
+                s.IsReported = result.IsSuccessStatusCode;
+                await InvokeAsync(StateHasChanged);
+            });
         }
         catch (Exception e)
         {
@@ -165,10 +157,30 @@
         {
             State.IsBusy = false;
         }
-
-        return Task.CompletedTask;
     }
-
+//
+//     private async Task GetWorkLogAsync()
+//     {
+//        
+//        
+//         try
+//         {
+//             await Electron.AutoUpdater.CheckForUpdatesAndNotifyAsync();
+//             Electron.AutoUpdater.OnError += s => information = s;
+//             var currentVersion = await Electron.App.GetVersionAsync();
+//             var updateCheckResult = await Electron.AutoUpdater.CheckForUpdatesAsync();
+//             var availableVersion = updateCheckResult.UpdateInfo.Version;
+//             information = $"Current version: {currentVersion} - available version: {availableVersion}";
+//         }
+//         catch (Exception e)
+//         {
+//             information = e.Message;
+//             
+//
+//         }
+// StateHasChanged();
+//     }
+    
     private async Task GetWorkLogAsync()
     {
         State.IsBusy = true;
@@ -255,26 +267,30 @@
         eItem.TimeUnit.project_title = project.title;
         eItem.TimeUnit.task_type_id = taskType?.id;
         eItem.TimeUnit.task_type_title = taskType?.title;
+        StateHasChanged();
     }
 
     private void SetTaskType(EtsItem eItem, string title)
     {
         var project = ProjectDictionary.Keys.First(s => s.title == eItem.TimeUnit.project_title);
-        var taskType = ProjectDictionary[project].FirstOrDefault(s => s.title == title);
+        var taskType = ProjectDictionary[project].FirstOrDefault(s => s.title == title) ?? ProjectDictionary[project].First();
         eItem.TimeUnit.task_type_id = taskType?.id;
         eItem.TimeUnit.task_type_title = taskType?.title;
+        StateHasChanged();
     }
 
     private async Task SetDefaultTaskProject(string? title)
     {
         DefaultProjectTitle = title;
         await ProtectedLocalStore.SetAsync("DefaultProject", DefaultProjectTitle);
+        StateHasChanged();
     }
 
     private async Task SetDefaultTaskType(string? title)
     {
         DefaultTaskTypeTitle = title;
         await ProtectedLocalStore.SetAsync("DefaultTaskType", DefaultTaskTypeTitle);
+        StateHasChanged();
     }
 
     private List<string> GetTaskTypes(string? projectTitle)

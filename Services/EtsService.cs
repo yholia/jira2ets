@@ -1,4 +1,6 @@
+using System.Net;
 using System.Net.Http.Headers;
+using jira2ets.Clients;
 using jira2ets.Models.Ets;
 using MatBlazor;
 
@@ -6,12 +8,11 @@ namespace jira2ets.Services
 {
     public class EtsService
     {
-        private readonly HttpClient _client;
+        private readonly EtsClient _etsClient;
 
-        public EtsService(IHttpClientFactory client)
+        public EtsService(EtsClient etsClient)
         {
-            _client = client.CreateClient();
-            _client.BaseAddress = new Uri("https://ets.akvelon.net");
+            _etsClient = etsClient;
         }
 
         public EmployeeDetails EmployeeDetails { get; private set; }
@@ -23,53 +24,28 @@ namespace jira2ets.Services
                 user = "ua\\" + user;
             }
 
-            var auth = new User {username = user, password = password};
-            var response = await _client.PostAsJsonAsync("/api/auth/sign-in", auth);
-            var authResponse = await response.Content.ReadFromJsonAsync<AuthResponse>();
-            _client.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", authResponse?.access_token);
+            var authResponse = await _etsClient.SignIn(user, password);
 
             EmployeeDetails = authResponse.employee_details;
         }
 
         public async Task<List<Project>> GetActiveProjects()
         {
-            try
-            {
-                var projects = await _client.GetJsonAsync<List<Project>>("/api/user/projects/");
+            var projects = await _etsClient.GetProjects();
 
-                return projects.Where(s => s.assignments.Any(a => a.status == "Active"))
-                    .ToList();
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-            }
-
-            return new List<Project>();
+            return projects.Where(s => s.assignments.Any(a => a.status == "Active"))
+                .ToList();
         }
 
         public async Task<List<TaskType>> GetTaskTypes(IEnumerable<Project> project)
         {
-            if (!project.Any())
-            {
-                return new List<TaskType>();
-            }
-            var typesPayload = new GetTaskTypesPayload {project_ids = project.Select(s => s.id).ToList()};
-
-            var response = await _client.PostAsJsonAsync("/api/task-types/", typesPayload);
-
-            return await response.Content.ReadFromJsonAsync<List<TaskType>>() ?? new List<TaskType>();
+            return await _etsClient.GetTaskTypes(project);
         }
 
-        public async Task CreateTimeUnit(TimeUnit timeUnit)
+        public async Task<HttpResponseMessage> CreateTimeUnit(TimeUnit timeUnit)
         {
-            await _client.PostAsJsonAsync("/api/time-units/", timeUnit);
-        }
-
-        private class GetTaskTypesPayload
-        {
-            public List<String> project_ids { get; set; }
+            Task.Delay(3000).Wait();
+            return await _etsClient.CreateTimeUnit(timeUnit);
         }
     }
 }

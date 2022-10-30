@@ -1,0 +1,40 @@
+@inherits LayoutComponentBase
+
+@inject State State
+
+@using jira2ets.Services
+@implements IDisposable
+
+<div style="margin-top: 30px; align-self: center;">
+    @if (State.IsBusy)
+    {
+        <div class="overlay" id="overlay">
+            <MatProgressBar Indeterminate="true"></MatProgressBar>
+        </div>
+    }
+    <MatDialog @bind-IsOpen="@State.IsDialogOpened">
+        <MatDialogTitle style="display: flex; align-items: center;">
+            <div style="flex: 1;">Error</div>
+        </MatDialogTitle>
+        <MatDialogContent>
+            <p>@State.DialogText</p>
+        </MatDialogContent>
+        <MatDialogActions>
+            <MatButton Raised="true" OnClick="@(() => State.IsDialogOpened = false)">Ok</MatButton>
+        </MatDialogActions>
+    </MatDialog>
+    @Body
+</div>
+
+@code
+{
+    protected override void OnInitialized()
+    {
+        State.OnChange += StateHasChanged;
+    }
+    
+    public void Dispose()
+    {
+        State.OnChange -= StateHasChanged;
+    }
+}

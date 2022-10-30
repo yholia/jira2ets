@@ -4,8 +4,8 @@
     "imageFile": ""
   },
   "name": "jira2ets",
-  "author": "",
-  "singleInstance": false,
+  "author": "Holiakhovskyi Yevhen",
+  "singleInstance": true,
   "environment": "Production",
   "build": {
     "appId": "com.jira2ets.app",
@@ -15,6 +15,11 @@
     "compression": "maximum",
     "directories": {
       "output": "../../../bin/Desktop"
+    },
+    "publish": {
+      "provider": "generic",
+      "url": "http://192.168.3.36:8090",
+      "channel": "latest"
     },
     "extraResources": [
       {
