@@ -40,7 +40,7 @@ public class EtsClient
         return await response.Content.ReadFromJsonAsync<List<TaskType>>();
     }
 
-    public async Task<HttpResponseMessage> CreateTimeUnit(TimeUnit timeUnit)
+    public async Task<HttpResponseMessage> CreateTimeUnit(TimeUnit? timeUnit)
     {
         return await _client.PostAsJsonAsync("/api/time-units/", timeUnit);
     }

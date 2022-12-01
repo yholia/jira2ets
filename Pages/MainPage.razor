@@ -3,7 +3,6 @@
 @using jira2ets.Models.Ets
 
 @inject ProtectedLocalStorage ProtectedLocalStore
-@inject HttpClient HttpClient
 @inject EtsService EtsService
 @inject JiraService JiraService
 @inject NavigationManager NavigationManager
@@ -46,7 +45,7 @@
                                    Label="Default Project"/>
                 </p>
                 <p>
-                    @if(@DefaultProjectTitle != null)
+                    @if (@DefaultProjectTitle is not null)
                     {
                         <MatSelectItem ValueChanged="@(async (string? s) => await SetDefaultTaskType(s))"
                                        Value="DefaultTaskTypeTitle"
@@ -79,18 +78,20 @@
                         <MatCheckbox @bind-Value="@eItem.ShouldBeReported"/>
                     </td>
                     <td>
-                        <MatSelectItem ValueChanged="@((string s) => SetTaskProject(eItem, s))"
-                                       Value="@eItem.TimeUnit.project_title"
-                                       Items="@ProjectDictionary.Keys.ToList().Select(s => s.title).ToList()"
-                                       Disabled="@(!eItem.ShouldBeReported)"
-                                       Outlined="true"/>
+                        <select class="form-select" @bind="@eItem.TimeUnit.project_title" disabled="@(!eItem.ShouldBeReported)">
+                            @foreach (var task in ProjectDictionary.Keys.ToList())
+                            {
+                                <option value="@task.title">@task.title</option>
+                            }
+                        </select>
                     </td>
                     <td>
-                        <MatSelectItem ValueChanged="@((string s) => SetTaskType(eItem, s))"
-                                       Value="@eItem.TimeUnit.task_type_title"
-                                       Items="@GetTaskTypes(eItem.TimeUnit.project_title)"
-                                       Disabled="@(!eItem.ShouldBeReported)"
-                                       Outlined="true"/>
+                        <select class="form-select" @bind="@eItem.TimeUnit.task_type_title" disabled="@(!eItem.ShouldBeReported)">
+                            @foreach (var task in ProjectDictionary.First(s => s.Key.title == eItem.TimeUnit.project_title).Value)
+                            {
+                                <option value="@task.title">@task.title</option>
+                            }
+                        </select>
                     </td>
                     <td>@eItem.TimeUnit.date</td>
                     <td>@eItem.TimeUnit.description</td>
@@ -141,12 +142,23 @@
         State.IsBusy = true;
         try
         {
-            await Parallel.ForEachAsync( EtsItems.Where(s => s.ShouldBeReported).ToList(), async (s, token)  =>
+            EtsItems.ForEach(item =>
             {
-                var result = await EtsService.CreateTimeUnit(s.TimeUnit);
-                s.IsReported = result.IsSuccessStatusCode;
-                await InvokeAsync(StateHasChanged);
+                var valuePair = ProjectDictionary.First(pair => pair.Key.title == item.TimeUnit?.project_title);
+                var project = valuePair.Key;
+                var assignments = valuePair.Value;
+                var taskType = assignments.Find(s => s.title == item.TimeUnit?.task_type_title);
+
+                item.TimeUnit.project_id = project.id;
+                item.TimeUnit.task_type_id = taskType?.id;
             });
+
+    // await Parallel.ForEachAsync(EtsItems.Where(s => s.ShouldBeReported).ToList(), async (s, token) =>
+    // {
+    //     var result = await EtsService.CreateTimeUnit(s.TimeUnit);
+    //     s.IsReported = result.IsSuccessStatusCode;
+    //     await InvokeAsync(StateHasChanged);
+    // });
         }
         catch (Exception e)
         {
@@ -158,29 +170,30 @@
             State.IsBusy = false;
         }
     }
-//
-//     private async Task GetWorkLogAsync()
-//     {
-//        
-//        
-//         try
-//         {
-//             await Electron.AutoUpdater.CheckForUpdatesAndNotifyAsync();
-//             Electron.AutoUpdater.OnError += s => information = s;
-//             var currentVersion = await Electron.App.GetVersionAsync();
-//             var updateCheckResult = await Electron.AutoUpdater.CheckForUpdatesAsync();
-//             var availableVersion = updateCheckResult.UpdateInfo.Version;
-//             information = $"Current version: {currentVersion} - available version: {availableVersion}";
-//         }
-//         catch (Exception e)
-//         {
-//             information = e.Message;
-//             
-//
-//         }
-// StateHasChanged();
-//     }
-    
+
+    //
+    //     private async Task GetWorkLogAsync()
+    //     {
+    //        
+    //        
+    //         try
+    //         {
+    //             await Electron.AutoUpdater.CheckForUpdatesAndNotifyAsync();
+    //             Electron.AutoUpdater.OnError += s => information = s;
+    //             var currentVersion = await Electron.App.GetVersionAsync();
+    //             var updateCheckResult = await Electron.AutoUpdater.CheckForUpdatesAsync();
+    //             var availableVersion = updateCheckResult.UpdateInfo.Version;
+    //             information = $"Current version: {currentVersion} - available version: {availableVersion}";
+    //         }
+    //         catch (Exception e)
+    //         {
+    //             information = e.Message;
+    //             
+    //
+    //         }
+    // StateHasChanged();
+    //     }
+
     private async Task GetWorkLogAsync()
     {
         State.IsBusy = true;
@@ -259,26 +272,6 @@
         return !item.ShouldBeReported ? "table-secondary" : "table";
     }
 
-    private void SetTaskProject(EtsItem eItem, string title)
-    {
-        var project = ProjectDictionary.Keys.First(r => r.title == title);
-        var taskType = ProjectDictionary[project].First();
-        eItem.TimeUnit.project_id = project.id;
-        eItem.TimeUnit.project_title = project.title;
-        eItem.TimeUnit.task_type_id = taskType?.id;
-        eItem.TimeUnit.task_type_title = taskType?.title;
-        StateHasChanged();
-    }
-
-    private void SetTaskType(EtsItem eItem, string title)
-    {
-        var project = ProjectDictionary.Keys.First(s => s.title == eItem.TimeUnit.project_title);
-        var taskType = ProjectDictionary[project].FirstOrDefault(s => s.title == title) ?? ProjectDictionary[project].First();
-        eItem.TimeUnit.task_type_id = taskType?.id;
-        eItem.TimeUnit.task_type_title = taskType?.title;
-        StateHasChanged();
-    }
-
     private async Task SetDefaultTaskProject(string? title)
     {
         DefaultProjectTitle = title;
@@ -295,15 +288,9 @@
 
     private List<string> GetTaskTypes(string? projectTitle)
     {
-        if (projectTitle == null)
-        {
-            return new List<string>();
-        }
-
-        var project = ProjectDictionary.Keys.FirstOrDefault(s => s.title == projectTitle);
-
-        return project != null 
-            ? ProjectDictionary[project].Select(s => s.title).ToList() 
-            : new List<string>();
+        return ProjectDictionary.Where(s => s.Key.title == projectTitle)
+            .SelectMany(s => s.Value)
+            .Select(s => s.title)
+            .ToList();
     }
 }

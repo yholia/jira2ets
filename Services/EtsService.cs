@@ -42,7 +42,7 @@ namespace jira2ets.Services
             return await _etsClient.GetTaskTypes(project);
         }
 
-        public async Task<HttpResponseMessage> CreateTimeUnit(TimeUnit timeUnit)
+        public async Task<HttpResponseMessage> CreateTimeUnit(TimeUnit? timeUnit)
         {
             Task.Delay(3000).Wait();
             return await _etsClient.CreateTimeUnit(timeUnit);
