@@ -44,24 +44,24 @@ var options = new BrowserWindowOptions()
 {
     ZoomToPageWidth = true,
     UseContentSize = true,
-    AutoHideMenuBar = false,
+    AutoHideMenuBar = true,
     Show = false,
     WebPreferences = new WebPreferences
     {
-        DevTools = true
+        DevTools = false
     }
 };
 
 Task.Run(async () => {
       await Electron.WindowManager.CreateWindowAsync(options)
-        .ContinueWith(async task =>
+        .ContinueWith(async windowTask =>
         {
-            var window = await task;
-            var version = await Electron.App.GetVersionAsync();
-
-
-
-            window.SetTitle("Jira to Ets: " + version);
+            var window = await windowTask;
+            var currentVersion = await Electron.App.GetVersionAsync();
+            
+            await Electron.AutoUpdater.DownloadUpdateAsync();
+            
+            window.SetTitle("Jira to Ets: " + currentVersion);
             window.Show();
         });
 });

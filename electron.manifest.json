@@ -17,9 +17,10 @@
       "output": "../../../bin/Desktop"
     },
     "publish": {
-      "provider": "generic",
-      "url": "http://192.168.3.36:8090",
-      "channel": "latest"
+      "owner": "yholia",
+      "repo": "jira2ets",
+      "provider": "github",
+      "private": true
     },
     "extraResources": [
       {

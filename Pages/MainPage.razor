@@ -153,12 +153,12 @@
                 item.TimeUnit.task_type_id = taskType?.id;
             });
 
-    // await Parallel.ForEachAsync(EtsItems.Where(s => s.ShouldBeReported).ToList(), async (s, token) =>
-    // {
-    //     var result = await EtsService.CreateTimeUnit(s.TimeUnit);
-    //     s.IsReported = result.IsSuccessStatusCode;
-    //     await InvokeAsync(StateHasChanged);
-    // });
+            await Parallel.ForEachAsync(EtsItems.Where(s => s.ShouldBeReported).ToList(), async (s, token) =>
+            {
+                var result = await EtsService.CreateTimeUnit(s.TimeUnit);
+                s.IsReported = result.IsSuccessStatusCode;
+                await InvokeAsync(StateHasChanged);
+            });
         }
         catch (Exception e)
         {
@@ -170,29 +170,6 @@
             State.IsBusy = false;
         }
     }
-
-    //
-    //     private async Task GetWorkLogAsync()
-    //     {
-    //        
-    //        
-    //         try
-    //         {
-    //             await Electron.AutoUpdater.CheckForUpdatesAndNotifyAsync();
-    //             Electron.AutoUpdater.OnError += s => information = s;
-    //             var currentVersion = await Electron.App.GetVersionAsync();
-    //             var updateCheckResult = await Electron.AutoUpdater.CheckForUpdatesAsync();
-    //             var availableVersion = updateCheckResult.UpdateInfo.Version;
-    //             information = $"Current version: {currentVersion} - available version: {availableVersion}";
-    //         }
-    //         catch (Exception e)
-    //         {
-    //             information = e.Message;
-    //             
-    //
-    //         }
-    // StateHasChanged();
-    //     }
 
     private async Task GetWorkLogAsync()
     {
