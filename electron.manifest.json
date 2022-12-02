@@ -14,6 +14,9 @@
     "buildVersion": "1.0.0",
     "compression": "maximum",
     "artifactName": "jira-2-ets-${version}.${ext}",
+    "win": {
+      "icon": "../../../wwwroot/favicon.ico"
+    },
     "directories": {
       "output": "../../../bin/Desktop"
     },
