@@ -10,9 +10,10 @@
   "build": {
     "appId": "com.jira2ets.app",
     "productName": "jira2ets",
-    "copyright": "Copyright © 2020",
+    "copyright": "Copyright © 2023",
     "buildVersion": "1.0.0",
     "compression": "maximum",
+    "artifactName": "jira-2-ets-${version}.${ext}",
     "directories": {
       "output": "../../../bin/Desktop"
     },

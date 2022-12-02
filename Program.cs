@@ -58,11 +58,14 @@ Task.Run(async () => {
         {
             var window = await windowTask;
             var currentVersion = await Electron.App.GetVersionAsync();
-            
-            await Electron.AutoUpdater.DownloadUpdateAsync();
-            
+
             window.SetTitle("Jira to Ets: " + currentVersion);
             window.Show();
+
+            Electron.AutoUpdater.OnError += (message) => Electron.Dialog.ShowErrorBox("Error", message);
+            Electron.AutoUpdater.OnUpdateDownloaded += async (_) => await Electron.Dialog.ShowMessageBoxAsync("Update available, please restart the app");
+
+            return await Electron.AutoUpdater.CheckForUpdatesAndNotifyAsync();
         });
 });
 
