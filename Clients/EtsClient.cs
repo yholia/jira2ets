@@ -19,16 +19,22 @@ public class EtsClient
     {
         var auth = new User {username = user, password = password};
         var response = await _client.PostAsJsonAsync("/api/auth/sign-in", auth);
-        var authResponse = await response.Content.ReadFromJsonAsync<AuthResponse>();
-        _client.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", authResponse?.access_token);
 
-        return authResponse;
+        if (response.IsSuccessStatusCode)
+        {
+            var authResponse = await response.Content.ReadFromJsonAsync<AuthResponse>();
+            _client.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", authResponse?.access_token);
+
+            return authResponse;
+        }
+
+        throw new Exception("ETS authorization is failed: " + response.StatusCode);
     }
 
     public async Task<List<Project>> GetProjects()
     {
-       return await _client.GetJsonAsync<List<Project>>("/api/user/projects/");
+        return await _client.GetJsonAsync<List<Project>>("/api/user/projects/");
     }
 
     public async Task<List<TaskType>> GetTaskTypes(IEnumerable<Project> project)

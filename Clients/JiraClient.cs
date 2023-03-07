@@ -22,7 +22,14 @@ public class JiraClient
         var token = ToBase64String(user, password);
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", token);
 
-        return await _client.GetJsonAsync<User>($"/rest/api/2/user?username={user}");
+        try
+        {
+            return await _client.GetJsonAsync<User>($"/rest/api/2/user?username={user}");
+        }
+        catch (HttpRequestException e)
+        {
+            throw new Exception("Jira authorization is failed: " + e.StatusCode);
+        }
     }
 
     public async Task<List<JiraItem>> GetWorklogs(DateTime? from, DateTime? to, string userKey)
