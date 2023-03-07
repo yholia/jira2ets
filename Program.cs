@@ -64,6 +64,17 @@ Task.Run(async () => {
 
             Electron.AutoUpdater.OnError += (message) => Electron.Dialog.ShowErrorBox("Error", message);
             Electron.AutoUpdater.OnUpdateDownloaded += async (_) => await Electron.Dialog.ShowMessageBoxAsync("Update available, please restart the app");
+            Electron.AutoUpdater.OnDownloadProgress += info =>
+            {
+                var progress = Double.Parse(info.Percent) / 100;
+            
+                if (progress >= 1)
+                {
+                    progress = -1;
+                }
+            
+                window.SetProgressBar(progress);
+            };
 
             return await Electron.AutoUpdater.CheckForUpdatesAndNotifyAsync();
         });
